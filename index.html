@@ -1,30 +1,32 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Kala Kelana Check-in</title>
-
-  <script src="https://unpkg.com/html5-qrcode"></script>
-
-  <style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <title>Kala Kelana Check-in</title>  <script src="https://unpkg.com/html5-qrcode"></script>  <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
       background: #f5f2eb;
+      margin: 0;
     }
 
     h1 {
       margin-bottom: 5px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
     }
 
     #reader {
+      width: 100%;
       max-width: 400px;
       margin: 20px auto;
       background: white;
       padding: 10px;
       border-radius: 15px;
+      box-sizing: border-box;
     }
 
     #hasil {
@@ -33,6 +35,7 @@
       padding: 20px;
       background: white;
       border-radius: 15px;
+      box-sizing: border-box;
     }
 
     .success {
@@ -42,88 +45,118 @@
     .error {
       background: #f8d7da !important;
     }
-  </style>
-</head>
 
-<body>
+    .loading {
+      background: #fff3cd !important;
+    }
 
-<h1>KALA KELANA</h1>
-<p>CHECK-IN PESERTA</p>
+    .nama {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
 
-<div id="reader"></div>
+    .paket {
+      font-size: 18px;
+    }
+  </style></head><body>  <h1>KALA KELANA</h1>
+  <p class="subtitle">CHECK-IN PESERTA</p>  <div id="reader"></div>  <div id="hasil">
+    Silakan scan QR peserta
+  </div><script>
 
-<div id="hasil">
-  Silakan scan QR peserta
-</div>
-
-
-<script>
-
-// =============================
-// MASUKKAN URL APPS SCRIPT DI SINI
-// =============================
+// =====================================================
+// URL APPS SCRIPT KAMU
+// =====================================================
 
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbz1z8XP4sTprKywtNf_L2tJ27E9CB-K8W6ekSouA1FGKjTINLupj-Ily_MGJL2M1hqnHA/exec";
 
 
-// =============================
-// PROSES HASIL SCAN
-// =============================
+// =====================================================
+// VARIABEL
+// =====================================================
 
 let sedangProses = false;
 
 
+// =====================================================
+// PROSES QR
+// =====================================================
+
 function prosesScan(kode) {
 
-  if (sedangProses) return;
+  if (sedangProses) {
+    return;
+  }
 
   sedangProses = true;
 
-  document.getElementById("hasil").innerHTML =
-    "<h3>⏳ Memeriksa tiket...</h3>";
+  const hasil = document.getElementById("hasil");
+
+  hasil.className = "loading";
+
+  hasil.innerHTML =
+    "<h2>⏳ MEMERIKSA TIKET...</h2>" +
+    "<p>" + kode + "</p>";
 
 
-  const callbackName =
-    "hasil_" + Date.now();
-
-
-  window[callbackName] = function(data) {
-
-    tampilkanHasil(data);
-
-    delete window[callbackName];
-
-    setTimeout(function() {
-
-      sedangProses = false;
-
-      document.getElementById("hasil").className = "";
-
-      document.getElementById("hasil").innerHTML =
-        "Silakan scan peserta berikutnya";
-
-    }, 3000);
-
-  };
-
-
-  const script =
-    document.createElement("script");
-
-
-  script.src =
+  const url =
     APPS_SCRIPT_URL +
     "?kode=" +
-    encodeURIComponent(kode) +
-    "&callback=" +
-    callbackName;
+    encodeURIComponent(kode);
 
 
-  document.body.appendChild(script);
+  fetch(url)
+    .then(response => {
+
+      if (!response.ok) {
+        throw new Error("Server error " + response.status);
+      }
+
+      return response.json();
+
+    })
+
+    .then(data => {
+
+      tampilkanHasil(data);
+
+    })
+
+    .catch(error => {
+
+      console.error(error);
+
+      hasil.className = "error";
+
+      hasil.innerHTML =
+        "<h2>❌ TERJADI KESALAHAN</h2>" +
+        "<p>Gagal menghubungi sistem check-in.</p>" +
+        "<p>Silakan coba scan lagi.</p>";
+
+    })
+
+    .finally(() => {
+
+      setTimeout(() => {
+
+        sedangProses = false;
+
+        hasil.className = "";
+
+        hasil.innerHTML =
+          "Silakan scan peserta berikutnya";
+
+      }, 4000);
+
+    });
 
 }
 
+
+// =====================================================
+// MENAMPILKAN HASIL
+// =====================================================
 
 function tampilkanHasil(data) {
 
@@ -131,51 +164,83 @@ function tampilkanHasil(data) {
     document.getElementById("hasil");
 
 
-  if (data.success) {
+  // CHECK-IN BERHASIL
+
+  if (data.success === true) {
 
     hasil.className = "success";
 
     hasil.innerHTML =
       "<h2>✅ CHECK-IN BERHASIL</h2>" +
-      "<p><b>Nama:</b> " +
-      data.nama +
-      "</p>" +
-      "<p><b>Package:</b> " +
-      data.paket +
-      "</p>";
 
+      "<div class='nama'>" +
+      data.nama +
+      "</div>" +
+
+      "<div class='paket'>" +
+      "Package: <b>" +
+      data.paket +
+      "</b>" +
+      "</div>";
+
+    return;
   }
 
-  else if (data.type === "USED") {
+
+  // TIKET SUDAH DIGUNAKAN
+
+  if (data.type === "USED") {
 
     hasil.className = "error";
 
     hasil.innerHTML =
       "<h2>⚠️ TIKET SUDAH DIGUNAKAN</h2>" +
-      "<p><b>Nama:</b> " +
-      data.nama +
-      "</p>" +
-      "<p><b>Package:</b> " +
-      data.paket +
-      "</p>";
 
+      "<div class='nama'>" +
+      data.nama +
+      "</div>" +
+
+      "<div class='paket'>" +
+      "Package: <b>" +
+      data.paket +
+      "</b>" +
+      "</div>";
+
+    return;
   }
 
-  else {
+
+  // TIKET TIDAK DITEMUKAN
+
+  if (data.type === "NOT_FOUND") {
 
     hasil.className = "error";
 
     hasil.innerHTML =
-      "<h2>❌ TIKET TIDAK DITEMUKAN</h2>";
+      "<h2>❌ TIKET TIDAK DITEMUKAN</h2>" +
 
+      "<p>QR Code tidak terdaftar.</p>";
+
+    return;
   }
+
+
+  // ERROR LAIN
+
+  hasil.className = "error";
+
+  hasil.innerHTML =
+    "<h2>❌ ERROR</h2>" +
+    "<p>" +
+    (data.message || "Terjadi kesalahan.") +
+    "</p>";
 
 }
 
 
-// =============================
-// SCANNER
-// =============================
+// =====================================================
+// HASIL SCAN QR
+// =====================================================
 
 function berhasilScan(decodedText) {
 
@@ -184,10 +249,16 @@ function berhasilScan(decodedText) {
 }
 
 
-function gagalScan(error) {
-  // Abaikan error scanner biasa
+function gagalScan(errorMessage) {
+
+  // Error scanning biasa diabaikan
+
 }
 
+
+// =====================================================
+// AKTIFKAN SCANNER
+// =====================================================
 
 const scanner =
   new Html5QrcodeScanner(
@@ -196,7 +267,13 @@ const scanner =
 
     {
       fps: 10,
-      qrbox: 250
+
+      qrbox: {
+        width: 250,
+        height: 250
+      },
+
+      rememberLastUsedCamera: true
     },
 
     false
@@ -209,7 +286,5 @@ scanner.render(
   gagalScan
 );
 
-</script>
-
-</body>
+</script></body>
 </html>
