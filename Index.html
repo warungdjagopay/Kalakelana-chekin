@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kala Kelana Check-in</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f5f2eb;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    #reader {
+      max-width: 400px;
+      margin: 20px auto;
+      background: white;
+      padding: 10px;
+      border-radius: 15px;
+    }
+
+    #hasil {
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>KALA KELANA</h1>
+<p>CHECK-IN PESERTA</p>
+
+<div id="reader"></div>
+
+<div id="hasil">
+  Menunggu kamera...
+</div>
+
+<script>
+
+function berhasilScan(kode) {
+
+  document.getElementById("hasil").innerHTML =
+    "<h2>✅ QR TERBACA</h2>" +
+    "<p>Kode:</p>" +
+    "<strong>" + kode + "</strong>";
+
+}
+
+function gagalScan(error) {
+  // error scanning biasa diabaikan
+}
+
+const scanner = new Html5QrcodeScanner(
+  "reader",
+  {
+    fps: 10,
+    qrbox: 250
+  },
+  false
+);
+
+scanner.render(berhasilScan, gagalScan);
+
+</script>
+
+</body>
+</html>
