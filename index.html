@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Kala Kelana Check-in</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -33,6 +34,14 @@
       background: white;
       border-radius: 15px;
     }
+
+    .success {
+      background: #d4edda !important;
+    }
+
+    .error {
+      background: #f8d7da !important;
+    }
   </style>
 </head>
 
@@ -44,34 +53,161 @@
 <div id="reader"></div>
 
 <div id="hasil">
-  Menunggu kamera...
+  Silakan scan QR peserta
 </div>
+
 
 <script>
 
-function berhasilScan(kode) {
+// =============================
+// MASUKKAN URL APPS SCRIPT DI SINI
+// =============================
+
+const APPS_SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycby95ffJjVSVo7HscPOPWM-3RK_T-LPSVdoG8zgxjEPfhUshhPGIPFH6Ygh51i07tKL--w/exec";
+
+
+// =============================
+// PROSES HASIL SCAN
+// =============================
+
+let sedangProses = false;
+
+
+function prosesScan(kode) {
+
+  if (sedangProses) return;
+
+  sedangProses = true;
 
   document.getElementById("hasil").innerHTML =
-    "<h2>✅ QR TERBACA</h2>" +
-    "<p>Kode:</p>" +
-    "<strong>" + kode + "</strong>";
+    "<h3>⏳ Memeriksa tiket...</h3>";
+
+
+  const callbackName =
+    "hasil_" + Date.now();
+
+
+  window[callbackName] = function(data) {
+
+    tampilkanHasil(data);
+
+    delete window[callbackName];
+
+    setTimeout(function() {
+
+      sedangProses = false;
+
+      document.getElementById("hasil").className = "";
+
+      document.getElementById("hasil").innerHTML =
+        "Silakan scan peserta berikutnya";
+
+    }, 3000);
+
+  };
+
+
+  const script =
+    document.createElement("script");
+
+
+  script.src =
+    APPS_SCRIPT_URL +
+    "?kode=" +
+    encodeURIComponent(kode) +
+    "&callback=" +
+    callbackName;
+
+
+  document.body.appendChild(script);
 
 }
+
+
+function tampilkanHasil(data) {
+
+  const hasil =
+    document.getElementById("hasil");
+
+
+  if (data.success) {
+
+    hasil.className = "success";
+
+    hasil.innerHTML =
+      "<h2>✅ CHECK-IN BERHASIL</h2>" +
+      "<p><b>Nama:</b> " +
+      data.nama +
+      "</p>" +
+      "<p><b>Package:</b> " +
+      data.paket +
+      "</p>";
+
+  }
+
+  else if (data.type === "USED") {
+
+    hasil.className = "error";
+
+    hasil.innerHTML =
+      "<h2>⚠️ TIKET SUDAH DIGUNAKAN</h2>" +
+      "<p><b>Nama:</b> " +
+      data.nama +
+      "</p>" +
+      "<p><b>Package:</b> " +
+      data.paket +
+      "</p>";
+
+  }
+
+  else {
+
+    hasil.className = "error";
+
+    hasil.innerHTML =
+      "<h2>❌ TIKET TIDAK DITEMUKAN</h2>";
+
+  }
+
+}
+
+
+// =============================
+// SCANNER
+// =============================
+
+function berhasilScan(decodedText) {
+
+  prosesScan(decodedText);
+
+}
+
 
 function gagalScan(error) {
-  // error scanning biasa diabaikan
+  // Abaikan error scanner biasa
 }
 
-const scanner = new Html5QrcodeScanner(
-  "reader",
-  {
-    fps: 10,
-    qrbox: 250
-  },
-  false
-);
 
-scanner.render(berhasilScan, gagalScan);
+const scanner =
+  new Html5QrcodeScanner(
+
+    "reader",
+
+    {
+      fps: 10,
+      qrbox: 250
+    },
+
+    false
+
+  );
+
+
+scanner.render(
+  berhasilScan,
+  gagalScan
+);
 
 </script>
 
